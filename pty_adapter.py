@@ -42,6 +42,11 @@ class BaseTerminalSession(ABC):
         pass
 
     @abstractmethod
+    def send_signal(self, signum: int) -> None:
+        """Send a signal (e.g. SIGINT) to child process group."""
+        pass
+
+    @abstractmethod
     def is_alive(self) -> bool:
         """Check if child process is still running."""
         pass
@@ -125,6 +130,16 @@ if sys.platform != "win32":
                     fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ, child_buf)
                 except Exception:
                     pass
+
+        def send_signal(self, signum: int) -> None:
+            if self.child_pid is not None:
+                try:
+                    os.killpg(os.getpgid(self.child_pid), signum)
+                except Exception:
+                    try:
+                        os.kill(self.child_pid, signum)
+                    except Exception:
+                        pass
 
         def is_alive(self) -> bool:
             if self.child_pid is None:
@@ -332,6 +347,13 @@ else:
             if self.h_pc:
                 size = COORD(cols, child_rows)
                 kernel32.ResizePseudoConsole(self.h_pc, size)
+
+        def send_signal(self, signum: int) -> None:
+            if self.proc_info:
+                try:
+                    kernel32.GenerateConsoleCtrlEvent(0, self.proc_info.dwProcessId)
+                except Exception:
+                    pass
 
         def is_alive(self) -> bool:
             if not self.proc_info:

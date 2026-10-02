@@ -705,11 +705,11 @@ class AgySupervisor:
             while self.running:
                 now = time.time()
                 # ログからの公式イベント通知のみで発火（誤爆ゼロ保証）
+                # メインループ（キー入力・画面出力）をフリーズさせないよう非同期スレッドで実行
                 if self.pending_confirmation_event.is_set() and (now - self.last_handled_time > 0.2):
-                    try:
-                        self._handle_confirmation()
-                    except Exception:
-                        self.pending_confirmation_event.clear()
+                    self.pending_confirmation_event.clear()
+                    self.last_handled_time = now
+                    threading.Thread(target=self._handle_confirmation, daemon=True).start()
 
                 # 定期的にウィンドウサイズ変化を検知 (0.5秒おき、特にWindows向け)
                 if now - last_size_check > 0.5:
@@ -724,6 +724,9 @@ class AgySupervisor:
                 user_input = read_stdin_nonblocking()
                 if user_input:
                     had_activity = True
+                    # Ctrl+C (\x03) が入力された場合、子プロセスグループに即座に SIGINT シグナルを叩き込む
+                    if b"\x03" in user_input:
+                        self.session.send_signal(signal.SIGINT)
                     self.session.write_child(user_input)
 
                 # 子プロセス出力の読み取り
