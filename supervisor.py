@@ -706,7 +706,10 @@ class AgySupervisor:
                 now = time.time()
                 # ログからの公式イベント通知のみで発火（誤爆ゼロ保証）
                 if self.pending_confirmation_event.is_set() and (now - self.last_handled_time > 0.2):
-                    self._handle_confirmation()
+                    try:
+                        self._handle_confirmation()
+                    except Exception:
+                        self.pending_confirmation_event.clear()
 
                 # 定期的にウィンドウサイズ変化を検知 (0.5秒おき、特にWindows向け)
                 if now - last_size_check > 0.5:

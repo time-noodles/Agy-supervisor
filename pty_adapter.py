@@ -131,9 +131,14 @@ if sys.platform != "win32":
                 return False
             try:
                 pid, _ = os.waitpid(self.child_pid, os.WNOHANG)
-                return pid == 0
-            except OSError:
+                if pid == self.child_pid:
+                    return False
+                os.kill(self.child_pid, 0)
+                return True
+            except ProcessLookupError:
                 return False
+            except OSError:
+                return True
 
         def close(self) -> None:
             if self.orig_stdin_attrs is not None:

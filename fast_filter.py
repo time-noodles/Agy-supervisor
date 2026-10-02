@@ -266,6 +266,16 @@ def evaluate_fast_filter(cmd: str) -> tuple[str, str] | None:
                         return ("REJECT", "【高速ガード拒否】python -c にコードが指定されていません。")
                 except Exception:
                     return None
+            elif "-m" in tokens:
+                try:
+                    m_idx = tokens.index("-m")
+                    if m_idx + 1 < len(tokens):
+                        mod = tokens[m_idx + 1]
+                        if mod in ("py_compile", "compileall", "unittest", "pytest", "json.tool"):
+                            continue
+                except Exception:
+                    pass
+                return None
             else:
                 # スクリプトファイル実行（python script.py 等）
                 # スクリプトファイルの内容はファイルハッシュおよび差分審査が必要なため、
